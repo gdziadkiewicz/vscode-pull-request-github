@@ -9,6 +9,8 @@ import { CopilotWorkingStatus, GitHubRepository } from './githubRepository';
 import {
 	AddIssueCommentResponse,
 	AddPullRequestToProjectResponse,
+	AddReactionResponse,
+	DeleteReactionResponse,
 	EditIssueCommentResponse,
 	LatestCommit,
 	LatestReviewThread,
@@ -17,7 +19,7 @@ import {
 	UpdateIssueResponse,
 } from './graphql';
 import { GithubItemStateEnum, IAccount, IIssueEditData, IMilestone, IProject, IProjectItem, Issue, StateReason } from './interface';
-import { convertRESTIssueToRawPullRequest, eventTime, parseCombinedTimelineEvents, parseGraphQlIssueComment, parseMilestone, parseSelectRestTimelineEvents, restPaginate } from './utils';
+import { convertRESTIssueToRawPullRequest, eventTime, getReactionGroup, parseCombinedTimelineEvents, parseGraphQlIssueComment, parseMilestone, parseSelectRestTimelineEvents, restPaginate } from './utils';
 import { COPILOT_ACCOUNTS, IComment } from '../common/comment';
 import { Disposable } from '../common/lifecycle';
 import Logger from '../common/logger';
@@ -107,6 +109,34 @@ export class IssueModel<TItem extends Issue = Issue> extends Disposable {
 
 	public get isClosed(): boolean {
 		return this.state === GithubItemStateEnum.Closed;
+	}
+
+	async addCommentReaction(graphNodeId: string, reaction: vscode.CommentReaction): Promise<AddReactionResponse | undefined> {
+		const { mutate, schema } = await this.githubRepository.ensure();
+		const { data } = await mutate<AddReactionResponse>({
+			mutation: schema.AddReaction,
+			variables: { input: { subjectId: graphNodeId, content: this.reactionContent(reaction) } },
+		});
+		if (!data) {
+			throw new Error('Add comment reaction failed.');
+		}
+		return data;
+	}
+
+	async deleteCommentReaction(graphNodeId: string, reaction: vscode.CommentReaction): Promise<DeleteReactionResponse | undefined> {
+		const { mutate, schema } = await this.githubRepository.ensure();
+		const { data } = await mutate<DeleteReactionResponse>({
+			mutation: schema.DeleteReaction,
+			variables: { input: { subjectId: graphNodeId, content: this.reactionContent(reaction) } },
+		});
+		if (!data) {
+			throw new Error('Delete comment reaction failed.');
+		}
+		return data;
+	}
+
+	private reactionContent(reaction: vscode.CommentReaction): string | undefined {
+		return getReactionGroup().find(candidate => candidate.label === reaction.label)?.title;
 	}
 
 	public get isMerged(): boolean {

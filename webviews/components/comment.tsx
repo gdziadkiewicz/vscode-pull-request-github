@@ -441,21 +441,35 @@ export const CommentBody = ({ comment, bodyHTML, body, canApplyPatch, allowEmpty
 			{applyPatchButton}
 			{specialDisplayBodyPostfix ? <br /> : null}
 			{specialDisplayBodyPostfix ? <em>{specialDisplayBodyPostfix}</em> : null}
-			<CommentReactions reactions={comment?.reactions} />
+			<CommentReactions reactions={comment?.reactions} comment={comment} />
 		</div>
 	);
 };
 
 type CommentReactionsProps = {
-	reactions?: { label: string; count: number; reactors: readonly string[] }[];
+	reactions?: { label: string; count: number; reactors: readonly string[]; viewerHasReacted: boolean }[];
 };
 
-const CommentReactions = ({ reactions }: CommentReactionsProps) => {
-	if (!Array.isArray(reactions) || reactions.length === 0) return null;
-	const filtered = reactions.filter(r => r.count > 0);
-	if (filtered.length === 0) return null;
+// allow-any-unicode-next-line
+const reactionOptions = ['👍', '👎', '😄', '🎉', '😕', '❤️', '🚀', '👀'];
+
+const CommentReactions = ({ reactions, comment }: CommentReactionsProps & { comment?: IComment }) => {
+	const { toggleCommentReaction } = useContext(PullRequestContext);
+	const [showPicker, setShowPicker] = useState(false);
+	const [busy, setBusy] = useState(false);
+	const filtered = reactions?.filter(r => r.count > 0) ?? [];
+	if (!comment?.graphNodeId) return null;
+	const toggle = async (label: string) => {
+		setBusy(true);
+		try {
+			await toggleCommentReaction(comment, label);
+			setShowPicker(false);
+		} finally {
+			setBusy(false);
+		}
+	};
 	return (
-		<div className="comment-reactions" style={{ marginTop: 6 }}>
+		<div className="comment-reactions">
 			{filtered.map((reaction, idx) => {
 				const maxReactors = 10;
 				const reactors = reaction.reactors || [];
@@ -470,14 +484,21 @@ const CommentReactions = ({ reactions }: CommentReactionsProps) => {
 					}
 				}
 				return (
-					<div
+					<button
 						key={reaction.label + idx}
 						title={title}
+						className={reaction.viewerHasReacted ? 'active' : ''}
+						disabled={busy}
+						onClick={() => toggle(reaction.label)}
 					>
 						<span className="reaction-label">{reaction.label}</span>{nbsp}{reaction.count > 1 ? <span className="reaction-count">{reaction.count}</span> : null}
-					</div>
+					</button>
 				);
 			})}
+			<button className="add-reaction" title="Add reaction" aria-expanded={showPicker} onClick={() => setShowPicker(!showPicker)}>+</button>
+			{showPicker ? <div className="reaction-picker" role="menu">
+				{reactionOptions.map(label => <button key={label} role="menuitem" disabled={busy} onClick={() => toggle(label)}>{label}</button>)}
+			</div> : null}
 		</div>
 	);
 };

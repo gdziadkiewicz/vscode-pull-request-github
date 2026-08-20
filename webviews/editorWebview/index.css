@@ -194,18 +194,45 @@ span.lineContent {
 .comment-reactions {
 	display: flex;
 	flex-direction: row;
+	position: relative;
+	gap: 4px;
+	margin-top: 6px;
 }
 
-.comment-reactions div {
+.comment-reactions > button {
 	font-size: 1.1em;
 	cursor: pointer;
 	user-select: none;
+	background: var(--vscode-button-secondaryBackground);
+	border: 1px solid var(--vscode-panel-border);
+	border-radius: 12px;
+	color: var(--vscode-button-secondaryForeground);
+	padding: 1px 7px;
 }
 
-.comment-reactions .reaction-label {
-	border-radius: 5px;
-	border: 1px solid var(--vscode-panel-border);
-	width: 14px;
+.comment-reactions > button:hover,
+.comment-reactions > button.active {
+	background: var(--vscode-button-secondaryHoverBackground);
+	border-color: var(--vscode-focusBorder);
+}
+
+.comment-reactions .reaction-picker {
+	background: var(--vscode-menu-background);
+	border: 1px solid var(--vscode-menu-border, var(--vscode-panel-border));
+	border-radius: 4px;
+	display: flex;
+	padding: 4px;
+	position: absolute;
+	top: 100%;
+	left: 0;
+	z-index: 10;
+}
+
+.comment-reactions .reaction-picker button {
+	background: transparent;
+	border: 0;
+	font-size: 1.2em;
+	padding: 4px;
 }
 
 #title:empty {

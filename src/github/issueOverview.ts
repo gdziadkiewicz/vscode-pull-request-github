@@ -12,7 +12,7 @@ import { FolderRepositoryManager } from './folderRepositoryManager';
 import { GithubItemStateEnum, IAccount, IMilestone, IProject, IProjectItem, RepoAccessAndMergeMethods } from './interface';
 import { IssueModel } from './issueModel';
 import { getAssigneesQuickPickItems, getLabelOptions, getMilestoneFromQuickPick, getProjectFromQuickPick } from './quickPicks';
-import { isInCodespaces, processPermalinks, vscodeDevPrLink } from './utils';
+import { isInCodespaces, parseGraphQLReaction, processPermalinks, vscodeDevPrLink } from './utils';
 import { ChangeAssigneesReply, DisplayLabel, FileUploadCompletedMessage, Issue, ProjectItemsReply, SubmitReviewArgs, SubmitReviewReply, UnresolvedIdentity, UploadFilesReply, UploadPastedFilesArgs } from './views';
 import { COPILOT_ACCOUNTS, IComment } from '../common/comment';
 import { emojify, ensureEmojis } from '../common/emoji';
@@ -418,6 +418,8 @@ export class IssueOverviewPanel<TItem extends IssueModel = IssueModel> extends W
 				return this.editComment(message);
 			case 'pr.delete-comment':
 				return this.deleteComment(message);
+			case 'pr.toggle-comment-reaction':
+				return this.toggleCommentReaction(message);
 			case 'pr.edit-description':
 				return this.editDescription(message);
 			case 'pr.edit-title':
@@ -874,6 +876,25 @@ export class IssueOverviewPanel<TItem extends IssueModel = IssueModel> extends W
 						});
 				}
 			});
+	}
+
+	private async toggleCommentReaction(message: IRequestMessage<{ comment: IComment; label: string }>) {
+		try {
+			const { comment, label } = message.args;
+			const reaction = comment.reactions?.find(candidate => candidate.label === label);
+			let groups;
+			if (reaction?.viewerHasReacted) {
+				const result = await this._item.deleteCommentReaction(comment.graphNodeId, { label, count: reaction.count, authorHasReacted: true, iconPath: '' });
+				groups = result?.removeReaction.subject.reactionGroups;
+			} else {
+				const result = await this._item.addCommentReaction(comment.graphNodeId, { label, count: reaction?.count ?? 0, authorHasReacted: false, iconPath: '' });
+				groups = result?.addReaction.subject.reactionGroups;
+			}
+			this._replyMessage(message, parseGraphQLReaction(groups ?? []));
+		} catch (e) {
+			this._throwError(message, e);
+			vscode.window.showErrorMessage(formatError(e));
+		}
 	}
 
 	protected async openLocalFile(message: IRequestMessage<OpenLocalFileArgs>): Promise<void> {
