@@ -2037,7 +2037,7 @@ export class PullRequestModel extends IssueModel<PullRequest> implements IPullRe
 		}
 	}
 
-	async addCommentReaction(graphNodeId: string, reaction: vscode.CommentReaction): Promise<AddReactionResponse | undefined> {
+	override async addCommentReaction(graphNodeId: string, reaction: vscode.CommentReaction): Promise<AddReactionResponse | undefined> {
 		const reactionEmojiToContent = getReactionGroup().reduce((prev, curr) => {
 			prev[curr.label] = curr.title;
 			return prev;
@@ -2063,7 +2063,7 @@ export class PullRequestModel extends IssueModel<PullRequest> implements IPullRe
 		return data;
 	}
 
-	async deleteCommentReaction(
+	override async deleteCommentReaction(
 		graphNodeId: string,
 		reaction: vscode.CommentReaction,
 	): Promise<DeleteReactionResponse | undefined> {

@@ -163,6 +163,12 @@ export class PRContext {
 	public editComment = (args: { comment: IComment; text: string }) =>
 		this.postMessage({ command: 'pr.edit-comment', args });
 
+	public toggleCommentReaction = async (comment: IComment, label: string) => {
+		const reactions = await this.postMessage({ command: 'pr.toggle-comment-reaction', args: { comment, label } });
+		comment.reactions = reactions;
+		this.updatePR(this.pr);
+	};
+
 	public generateDescription = (): Promise<DescriptionResult> =>
 		this.postMessage({ command: 'pr.generate-description' });
 
